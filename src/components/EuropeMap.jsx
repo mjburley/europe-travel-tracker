@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { MapContainer, TileLayer, Marker, Tooltip, useMap, useMapEvents } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Tooltip, useMap, useMapEvents, ZoomControl } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 
@@ -100,8 +100,8 @@ export default function EuropeMap({
       zoom={EUROPE_ZOOM}
       className="w-full h-full"
       scrollWheelZoom={true}
-      wheelPxPerZoomLevel={120}
-      zoomControl={true}
+      wheelPxPerZoomLevel={300}
+      zoomControl={false}
       maxBounds={[
         [EUROPE_BOUNDS.minLat - 5, EUROPE_BOUNDS.minLon - 10],
         [EUROPE_BOUNDS.maxLat + 5, EUROPE_BOUNDS.maxLon + 10],
@@ -112,6 +112,9 @@ export default function EuropeMap({
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
       />
+
+      {/* Zoom controls in bottom-right to avoid title overlap */}
+      <ZoomControl position="bottomright" />
 
       {/* Handle map clicks */}
       <MapClickHandler onMapClick={onMapClick} />
