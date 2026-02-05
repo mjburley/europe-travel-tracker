@@ -1,9 +1,8 @@
 import { createClient } from '@supabase/supabase-js';
 
-// Replace with your Supabase project credentials
-// Get these from: https://supabase.com/dashboard/project/YOUR_PROJECT/settings/api
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || 'YOUR_SUPABASE_URL';
-const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || 'YOUR_SUPABASE_ANON_KEY';
+// Supabase project credentials
+const SUPABASE_URL = 'https://vmvhzcodrtlklmsekpyf.supabase.co';
+const SUPABASE_ANON_KEY = 'sb_publishable__v2A2o7kixvHCEg6qE43IA_pMriE7F6';
 
 export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
