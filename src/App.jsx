@@ -4,36 +4,33 @@ import SearchBar from './components/SearchBar';
 import PlaceModal from './components/PlaceModal';
 import VisitedPlacesList from './components/VisitedPlacesList';
 import { reverseGeocode } from './services/nominatim';
+import { getVisitedPlaces, saveVisitedPlace, deleteVisitedPlace } from './services/supabase';
 import './index.css';
-
-// Local storage key for persistence
-const STORAGE_KEY = 'europe-travel-tracker-places';
 
 function App() {
   const [selectedPlace, setSelectedPlace] = useState(null);
   const [modalPlace, setModalPlace] = useState(null);
   const [visitedPlaces, setVisitedPlaces] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  // Load visited places from localStorage on mount
+  // Load visited places from Supabase on mount
   useEffect(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEY);
-      if (saved) {
-        setVisitedPlaces(JSON.parse(saved));
+    async function loadPlaces() {
+      try {
+        setIsLoading(true);
+        const places = await getVisitedPlaces();
+        setVisitedPlaces(places);
+        setError(null);
+      } catch (err) {
+        console.error('Error loading places:', err);
+        setError('Failed to load places');
+      } finally {
+        setIsLoading(false);
       }
-    } catch (error) {
-      console.error('Error loading saved places:', error);
     }
+    loadPlaces();
   }, []);
-
-  // Save to localStorage when visitedPlaces changes
-  useEffect(() => {
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(visitedPlaces));
-    } catch (error) {
-      console.error('Error saving places:', error);
-    }
-  }, [visitedPlaces]);
 
   function handlePlaceSelect(place) {
     setSelectedPlace(place);
@@ -41,7 +38,6 @@ function App() {
   }
 
   async function handleMapClick(lat, lon) {
-    // Reverse geocode to get place name
     const locationInfo = await reverseGeocode(lat, lon);
 
     const clickedPlace = {
@@ -57,8 +53,8 @@ function App() {
     setModalPlace(clickedPlace);
   }
 
-  function handleSavePlace(placeWithData) {
-    // Check if already visited (by coordinates, since clicked places have unique IDs)
+  async function handleSavePlace(placeWithData) {
+    // Check if already visited (by coordinates)
     const isDuplicate = visitedPlaces.some(
       (p) => Math.abs(p.lat - placeWithData.lat) < 0.001 && Math.abs(p.lon - placeWithData.lon) < 0.001
     );
@@ -67,14 +63,19 @@ function App() {
       return;
     }
 
-    const newVisitedPlace = {
-      ...placeWithData,
-      visitedAt: new Date().toISOString(),
-    };
+    try {
+      const savedPlace = await saveVisitedPlace({
+        ...placeWithData,
+        visitedAt: new Date().toISOString(),
+      });
 
-    setVisitedPlaces((prev) => [...prev, newVisitedPlace]);
-    setSelectedPlace(null);
-    setModalPlace(null);
+      setVisitedPlaces((prev) => [savedPlace, ...prev]);
+      setSelectedPlace(null);
+      setModalPlace(null);
+    } catch (err) {
+      console.error('Error saving place:', err);
+      setError('Failed to save place');
+    }
   }
 
   function handleMarkerClick(place) {
@@ -88,14 +89,19 @@ function App() {
 
   function isPlaceSaved(place) {
     if (!place) return false;
-    // Check by coordinates for clicked places
     return visitedPlaces.some(
       (p) => Math.abs(p.lat - place.lat) < 0.001 && Math.abs(p.lon - place.lon) < 0.001
     );
   }
 
-  function handleDeletePlace(placeId) {
-    setVisitedPlaces((prev) => prev.filter((p) => p.id !== placeId));
+  async function handleDeletePlace(placeId) {
+    try {
+      await deleteVisitedPlace(placeId);
+      setVisitedPlaces((prev) => prev.filter((p) => p.id !== placeId));
+    } catch (err) {
+      console.error('Error deleting place:', err);
+      setError('Failed to delete place');
+    }
   }
 
   function handleFlyToPlace(place) {
@@ -116,6 +122,21 @@ function App() {
       <div className="absolute top-4 left-1/2 -translate-x-1/2 z-[1000] w-full px-4 flex justify-center">
         <SearchBar onPlaceSelect={handlePlaceSelect} />
       </div>
+
+      {/* Loading indicator */}
+      {isLoading && (
+        <div className="absolute top-20 left-1/2 -translate-x-1/2 z-[1000] bg-white/90 backdrop-blur-sm px-4 py-2 rounded-lg shadow-lg">
+          <span className="text-gray-600">Loading places...</span>
+        </div>
+      )}
+
+      {/* Error message */}
+      {error && (
+        <div className="absolute top-20 left-1/2 -translate-x-1/2 z-[1000] bg-red-100 text-red-700 px-4 py-2 rounded-lg shadow-lg">
+          {error}
+          <button onClick={() => setError(null)} className="ml-2 font-bold">×</button>
+        </div>
+      )}
 
       {/* Visited places counter */}
       {visitedPlaces.length > 0 && (
