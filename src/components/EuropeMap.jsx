@@ -100,6 +100,7 @@ export default function EuropeMap({
       zoom={EUROPE_ZOOM}
       className="w-full h-full"
       scrollWheelZoom={true}
+      wheelPxPerZoomLevel={120}
       zoomControl={true}
       maxBounds={[
         [EUROPE_BOUNDS.minLat - 5, EUROPE_BOUNDS.minLon - 10],
