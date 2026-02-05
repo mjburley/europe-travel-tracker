@@ -3,6 +3,7 @@ import EuropeMap from './components/EuropeMap';
 import SearchBar from './components/SearchBar';
 import PlaceModal from './components/PlaceModal';
 import PlacesList from './components/PlacesList';
+import RecommendationModal from './components/RecommendationModal';
 import { reverseGeocode } from './services/nominatim';
 import { getVisitedPlaces, saveVisitedPlace, deleteVisitedPlace } from './services/supabase';
 import './index.css';
@@ -13,6 +14,7 @@ function App() {
   const [places, setPlaces] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [showRecommendation, setShowRecommendation] = useState(false);
 
   // Load places from Supabase on mount
   useEffect(() => {
@@ -72,8 +74,26 @@ function App() {
       setPlaces((prev) => [savedPlace, ...prev]);
       setSelectedPlace(null);
       setModalPlace(null);
+      setShowRecommendation(false);
     } catch (err) {
       console.error('Error saving place:', err);
+      setError('Failed to save place');
+    }
+  }
+
+  async function handleAddRecommendationToWishlist(recPlace) {
+    try {
+      const savedPlace = await saveVisitedPlace({
+        ...recPlace,
+        category: 'want_to_visit',
+        visitedAt: new Date().toISOString(),
+      });
+
+      setPlaces((prev) => [savedPlace, ...prev]);
+      setShowRecommendation(false);
+      setSelectedPlace(savedPlace);
+    } catch (err) {
+      console.error('Error saving recommendation:', err);
       setError('Failed to save place');
     }
   }
@@ -165,6 +185,17 @@ function App() {
         <h1 className="text-lg font-bold text-gray-800">Europe Travel Tracker</h1>
       </div>
 
+      {/* Recommend button */}
+      <button
+        onClick={() => setShowRecommendation(true)}
+        className="absolute bottom-4 left-1/2 -translate-x-1/2 z-[1000] bg-gradient-to-r from-purple-500 to-indigo-500 text-white px-5 py-2.5 rounded-full shadow-lg hover:from-purple-600 hover:to-indigo-600 transition-all flex items-center gap-2 font-medium"
+      >
+        <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+          <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+        </svg>
+        Recommend a Place
+      </button>
+
       {/* Places Sidebar */}
       <PlacesList
         places={places}
@@ -180,6 +211,15 @@ function App() {
           onSave={handleSavePlace}
           isSaved={isPlaceSaved(modalPlace)}
           existingCategory={modalPlace.category}
+        />
+      )}
+
+      {/* Recommendation Modal */}
+      {showRecommendation && (
+        <RecommendationModal
+          places={places}
+          onClose={() => setShowRecommendation(false)}
+          onAddToWishlist={handleAddRecommendationToWishlist}
         />
       )}
     </div>
