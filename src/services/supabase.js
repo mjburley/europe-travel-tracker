@@ -15,10 +15,12 @@ export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 // - lat: float8
 // - lon: float8
 // - country: text
-// - wiki_summary: text (nullable)
 // - wiki_url: text (nullable)
 // - auto_image_url: text (nullable)
 // - user_image_url: text (nullable)
+// - notes: text (nullable)
+// - category: text ('visited' or 'want_to_visit')
+// - want_to_visit_reason: text (nullable)
 // - visited_at: timestamptz
 // - created_at: timestamptz (auto)
 
@@ -96,10 +98,12 @@ function transformFromDb(dbPlace) {
     lat: dbPlace.lat,
     lon: dbPlace.lon,
     country: dbPlace.country,
-    wikiSummary: dbPlace.wiki_summary,
     wikiUrl: dbPlace.wiki_url,
     autoImageUrl: dbPlace.auto_image_url,
     userImageUrl: dbPlace.user_image_url,
+    notes: dbPlace.notes,
+    category: dbPlace.category || 'visited',
+    wantToVisitReason: dbPlace.want_to_visit_reason,
     visitedAt: dbPlace.visited_at,
   };
 }
@@ -113,10 +117,12 @@ function transformToDb(place) {
     lat: place.lat,
     lon: place.lon,
     country: place.country,
-    wiki_summary: place.wikiSummary || null,
     wiki_url: place.wikiUrl || null,
     auto_image_url: place.autoImageUrl || null,
     user_image_url: place.userImageUrl || null,
+    notes: place.notes || null,
+    category: place.category || 'visited',
+    want_to_visit_reason: place.wantToVisitReason || null,
     visited_at: place.visitedAt || new Date().toISOString(),
   };
 }

@@ -22,6 +22,17 @@ const visitedIcon = new L.Icon({
   shadowSize: [41, 41],
 });
 
+// Custom orange icon for "want to visit" places
+const wishlistIcon = new L.Icon({
+  iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-orange.png',
+  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
+  iconSize: [25, 41],
+  iconAnchor: [12, 41],
+  popupAnchor: [1, -34],
+  tooltipAnchor: [12, -20],
+  shadowSize: [41, 41],
+});
+
 // Custom red icon for temporary/search markers
 const tempIcon = new L.Icon({
   iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png',
@@ -88,9 +99,14 @@ function MapClickHandler({ onMapClick }) {
   return null;
 }
 
+// Get the appropriate icon based on category
+function getMarkerIcon(category) {
+  return category === 'want_to_visit' ? wishlistIcon : visitedIcon;
+}
+
 export default function EuropeMap({
   selectedPlace,
-  visitedPlaces = [],
+  places = [],
   onMarkerClick,
   onMapClick,
 }) {
@@ -136,12 +152,12 @@ export default function EuropeMap({
         </Marker>
       )}
 
-      {/* Visited places markers with hover tooltips */}
-      {visitedPlaces.map((place) => (
+      {/* Saved places markers with hover tooltips */}
+      {places.map((place) => (
         <Marker
           key={place.id}
           position={[place.lat, place.lon]}
-          icon={visitedIcon}
+          icon={getMarkerIcon(place.category)}
           eventHandlers={{
             click: () => onMarkerClick?.(place),
           }}
@@ -161,6 +177,9 @@ export default function EuropeMap({
               )}
               <div className="font-medium text-gray-900">{place.shortName}</div>
               <div className="text-xs text-gray-500">{place.country}</div>
+              <div className={`text-xs mt-1 ${place.category === 'want_to_visit' ? 'text-amber-600' : 'text-green-600'}`}>
+                {place.category === 'want_to_visit' ? 'Wishlist' : 'Visited'}
+              </div>
             </div>
           </Tooltip>
         </Marker>
@@ -169,4 +188,4 @@ export default function EuropeMap({
   );
 }
 
-export { visitedIcon, tempIcon, isInEurope };
+export { visitedIcon, wishlistIcon, tempIcon, isInEurope };

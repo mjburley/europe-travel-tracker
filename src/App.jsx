@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import EuropeMap from './components/EuropeMap';
 import SearchBar from './components/SearchBar';
 import PlaceModal from './components/PlaceModal';
-import VisitedPlacesList from './components/VisitedPlacesList';
+import PlacesList from './components/PlacesList';
 import { reverseGeocode } from './services/nominatim';
 import { getVisitedPlaces, saveVisitedPlace, deleteVisitedPlace } from './services/supabase';
 import './index.css';
@@ -10,17 +10,17 @@ import './index.css';
 function App() {
   const [selectedPlace, setSelectedPlace] = useState(null);
   const [modalPlace, setModalPlace] = useState(null);
-  const [visitedPlaces, setVisitedPlaces] = useState([]);
+  const [places, setPlaces] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // Load visited places from Supabase on mount
+  // Load places from Supabase on mount
   useEffect(() => {
     async function loadPlaces() {
       try {
         setIsLoading(true);
-        const places = await getVisitedPlaces();
-        setVisitedPlaces(places);
+        const loadedPlaces = await getVisitedPlaces();
+        setPlaces(loadedPlaces);
         setError(null);
       } catch (err) {
         console.error('Error loading places:', err);
@@ -54,8 +54,8 @@ function App() {
   }
 
   async function handleSavePlace(placeWithData) {
-    // Check if already visited (by coordinates)
-    const isDuplicate = visitedPlaces.some(
+    // Check if already saved (by coordinates)
+    const isDuplicate = places.some(
       (p) => Math.abs(p.lat - placeWithData.lat) < 0.001 && Math.abs(p.lon - placeWithData.lon) < 0.001
     );
 
@@ -69,7 +69,7 @@ function App() {
         visitedAt: new Date().toISOString(),
       });
 
-      setVisitedPlaces((prev) => [savedPlace, ...prev]);
+      setPlaces((prev) => [savedPlace, ...prev]);
       setSelectedPlace(null);
       setModalPlace(null);
     } catch (err) {
@@ -89,7 +89,7 @@ function App() {
 
   function isPlaceSaved(place) {
     if (!place) return false;
-    return visitedPlaces.some(
+    return places.some(
       (p) => Math.abs(p.lat - place.lat) < 0.001 && Math.abs(p.lon - place.lon) < 0.001
     );
   }
@@ -97,7 +97,7 @@ function App() {
   async function handleDeletePlace(placeId) {
     try {
       await deleteVisitedPlace(placeId);
-      setVisitedPlaces((prev) => prev.filter((p) => p.id !== placeId));
+      setPlaces((prev) => prev.filter((p) => p.id !== placeId));
     } catch (err) {
       console.error('Error deleting place:', err);
       setError('Failed to delete place');
@@ -108,12 +108,16 @@ function App() {
     setSelectedPlace(place);
   }
 
+  // Count by category
+  const visitedCount = places.filter(p => p.category !== 'want_to_visit').length;
+  const wishlistCount = places.filter(p => p.category === 'want_to_visit').length;
+
   return (
     <div className="relative w-screen h-screen overflow-hidden">
       {/* Map takes full screen */}
       <EuropeMap
         selectedPlace={selectedPlace}
-        visitedPlaces={visitedPlaces}
+        places={places}
         onMarkerClick={handleMarkerClick}
         onMapClick={handleMapClick}
       />
@@ -134,16 +138,25 @@ function App() {
       {error && (
         <div className="absolute top-20 left-1/2 -translate-x-1/2 z-[1000] bg-red-100 text-red-700 px-4 py-2 rounded-lg shadow-lg">
           {error}
-          <button onClick={() => setError(null)} className="ml-2 font-bold">×</button>
+          <button onClick={() => setError(null)} className="ml-2 font-bold">x</button>
         </div>
       )}
 
-      {/* Visited places counter */}
-      {visitedPlaces.length > 0 && (
+      {/* Places counter */}
+      {places.length > 0 && (
         <div className="absolute bottom-4 left-4 z-[1000] bg-white/90 backdrop-blur-sm px-4 py-2 rounded-lg shadow-lg">
-          <span className="font-medium text-gray-700">
-            {visitedPlaces.length} place{visitedPlaces.length !== 1 ? 's' : ''} visited
-          </span>
+          <div className="flex gap-3 text-sm">
+            {visitedCount > 0 && (
+              <span className="text-green-600 font-medium">
+                {visitedCount} visited
+              </span>
+            )}
+            {wishlistCount > 0 && (
+              <span className="text-amber-600 font-medium">
+                {wishlistCount} wishlist
+              </span>
+            )}
+          </div>
         </div>
       )}
 
@@ -152,9 +165,9 @@ function App() {
         <h1 className="text-lg font-bold text-gray-800">Europe Travel Tracker</h1>
       </div>
 
-      {/* Visited Places Sidebar */}
-      <VisitedPlacesList
-        places={visitedPlaces}
+      {/* Places Sidebar */}
+      <PlacesList
+        places={places}
         onPlaceClick={handleFlyToPlace}
         onDeletePlace={handleDeletePlace}
       />
@@ -166,6 +179,7 @@ function App() {
           onClose={handleCloseModal}
           onSave={handleSavePlace}
           isSaved={isPlaceSaved(modalPlace)}
+          existingCategory={modalPlace.category}
         />
       )}
     </div>
