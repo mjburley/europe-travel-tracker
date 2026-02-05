@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Tooltip, useMap, useMapEvents } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 
@@ -18,6 +18,7 @@ const visitedIcon = new L.Icon({
   iconSize: [25, 41],
   iconAnchor: [12, 41],
   popupAnchor: [1, -34],
+  tooltipAnchor: [12, -20],
   shadowSize: [41, 41],
 });
 
@@ -28,12 +29,29 @@ const tempIcon = new L.Icon({
   iconSize: [25, 41],
   iconAnchor: [12, 41],
   popupAnchor: [1, -34],
+  tooltipAnchor: [12, -20],
   shadowSize: [41, 41],
 });
 
-// Europe center coordinates
+// Europe center coordinates and bounds
 const EUROPE_CENTER = [54.526, 15.2551];
 const EUROPE_ZOOM = 4;
+const EUROPE_BOUNDS = {
+  minLat: 34.0,
+  maxLat: 72.0,
+  minLon: -25.0,
+  maxLon: 45.0,
+};
+
+// Check if coordinates are within Europe
+function isInEurope(lat, lon) {
+  return (
+    lat >= EUROPE_BOUNDS.minLat &&
+    lat <= EUROPE_BOUNDS.maxLat &&
+    lon >= EUROPE_BOUNDS.minLon &&
+    lon <= EUROPE_BOUNDS.maxLon
+  );
+}
 
 // Component to handle fly-to animations
 function FlyToLocation({ position, zoom = 10 }) {
@@ -57,11 +75,24 @@ function FlyToLocation({ position, zoom = 10 }) {
   return null;
 }
 
+// Component to handle map click events
+function MapClickHandler({ onMapClick }) {
+  useMapEvents({
+    click: (e) => {
+      const { lat, lng } = e.latlng;
+      if (isInEurope(lat, lng)) {
+        onMapClick(lat, lng);
+      }
+    },
+  });
+  return null;
+}
+
 export default function EuropeMap({
   selectedPlace,
   visitedPlaces = [],
   onMarkerClick,
-  onSavePlace
+  onMapClick,
 }) {
   return (
     <MapContainer
@@ -70,41 +101,38 @@ export default function EuropeMap({
       className="w-full h-full"
       scrollWheelZoom={true}
       zoomControl={true}
+      maxBounds={[
+        [EUROPE_BOUNDS.minLat - 5, EUROPE_BOUNDS.minLon - 10],
+        [EUROPE_BOUNDS.maxLat + 5, EUROPE_BOUNDS.maxLon + 10],
+      ]}
+      minZoom={3}
     >
       <TileLayer
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
       />
 
+      {/* Handle map clicks */}
+      <MapClickHandler onMapClick={onMapClick} />
+
       {/* Fly to selected place */}
       {selectedPlace && (
         <FlyToLocation position={[selectedPlace.lat, selectedPlace.lon]} />
       )}
 
-      {/* Temporary marker for search result */}
+      {/* Temporary marker for search/click result */}
       {selectedPlace && (
         <Marker
           position={[selectedPlace.lat, selectedPlace.lon]}
           icon={tempIcon}
         >
-          <Popup>
-            <div className="min-w-[200px]">
-              <h3 className="font-bold text-lg text-gray-900">{selectedPlace.shortName}</h3>
-              <p className="text-sm text-gray-600 mb-2">{selectedPlace.country}</p>
-              {onSavePlace && (
-                <button
-                  onClick={() => onSavePlace(selectedPlace)}
-                  className="w-full px-3 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition-colors text-sm font-medium"
-                >
-                  + Add to Visited Places
-                </button>
-              )}
-            </div>
-          </Popup>
+          <Tooltip direction="top" offset={[0, -20]} permanent>
+            <span className="font-medium">{selectedPlace.shortName}</span>
+          </Tooltip>
         </Marker>
       )}
 
-      {/* Visited places markers */}
+      {/* Visited places markers with hover tooltips */}
       {visitedPlaces.map((place) => (
         <Marker
           key={place.id}
@@ -114,26 +142,27 @@ export default function EuropeMap({
             click: () => onMarkerClick?.(place),
           }}
         >
-          <Popup>
-            <div className="min-w-[200px]">
-              <h3 className="font-bold text-lg text-gray-900">{place.shortName}</h3>
-              <p className="text-sm text-gray-600">{place.country}</p>
-              {place.wikiSummary && (
-                <p className="text-sm text-gray-700 mt-2">{place.wikiSummary}</p>
-              )}
-              {place.autoImageUrl && (
+          <Tooltip
+            direction="top"
+            offset={[0, -20]}
+            className="visited-tooltip"
+          >
+            <div className="text-center min-w-[120px]">
+              {(place.userImageUrl || place.autoImageUrl) && (
                 <img
-                  src={place.autoImageUrl}
+                  src={place.userImageUrl || place.autoImageUrl}
                   alt={place.shortName}
-                  className="w-full h-24 object-cover rounded mt-2"
+                  className="w-full h-16 object-cover rounded mb-1"
                 />
               )}
+              <div className="font-medium text-gray-900">{place.shortName}</div>
+              <div className="text-xs text-gray-500">{place.country}</div>
             </div>
-          </Popup>
+          </Tooltip>
         </Marker>
       ))}
     </MapContainer>
   );
 }
 
-export { visitedIcon, tempIcon };
+export { visitedIcon, tempIcon, isInEurope };

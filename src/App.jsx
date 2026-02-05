@@ -3,6 +3,7 @@ import EuropeMap from './components/EuropeMap';
 import SearchBar from './components/SearchBar';
 import PlaceModal from './components/PlaceModal';
 import VisitedPlacesList from './components/VisitedPlacesList';
+import { reverseGeocode } from './services/nominatim';
 import './index.css';
 
 // Local storage key for persistence
@@ -39,9 +40,30 @@ function App() {
     setModalPlace(place);
   }
 
+  async function handleMapClick(lat, lon) {
+    // Reverse geocode to get place name
+    const locationInfo = await reverseGeocode(lat, lon);
+
+    const clickedPlace = {
+      id: `clicked-${Date.now()}`,
+      name: locationInfo?.name || 'Unknown Location',
+      shortName: locationInfo?.shortName || 'Unknown',
+      lat,
+      lon,
+      country: locationInfo?.country || '',
+    };
+
+    setSelectedPlace(clickedPlace);
+    setModalPlace(clickedPlace);
+  }
+
   function handleSavePlace(placeWithData) {
-    // Check if already visited
-    if (visitedPlaces.some((p) => p.id === placeWithData.id)) {
+    // Check if already visited (by coordinates, since clicked places have unique IDs)
+    const isDuplicate = visitedPlaces.some(
+      (p) => Math.abs(p.lat - placeWithData.lat) < 0.001 && Math.abs(p.lon - placeWithData.lon) < 0.001
+    );
+
+    if (isDuplicate) {
       return;
     }
 
@@ -65,7 +87,11 @@ function App() {
   }
 
   function isPlaceSaved(place) {
-    return visitedPlaces.some((p) => p.id === place?.id);
+    if (!place) return false;
+    // Check by coordinates for clicked places
+    return visitedPlaces.some(
+      (p) => Math.abs(p.lat - place.lat) < 0.001 && Math.abs(p.lon - place.lon) < 0.001
+    );
   }
 
   function handleDeletePlace(placeId) {
@@ -83,9 +109,7 @@ function App() {
         selectedPlace={selectedPlace}
         visitedPlaces={visitedPlaces}
         onMarkerClick={handleMarkerClick}
-        onSavePlace={(place) => {
-          setModalPlace(place);
-        }}
+        onMapClick={handleMapClick}
       />
 
       {/* Search bar overlay */}

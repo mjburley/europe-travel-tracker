@@ -3,15 +3,16 @@ import { usePlaceData } from '../hooks/usePlaceData';
 
 export default function PlaceModal({ place, onClose, onSave, isSaved = false }) {
   const { wikiData, imageData, isLoading } = usePlaceData(place);
-  const [userImage, setUserImage] = useState(null);
   const [userImagePreview, setUserImagePreview] = useState(null);
 
   if (!place) return null;
 
+  // Determine which image to show - user upload takes priority
+  const displayImage = userImagePreview || place.userImageUrl || imageData?.url;
+
   function handleImageUpload(event) {
     const file = event.target.files?.[0];
     if (file) {
-      setUserImage(file);
       const reader = new FileReader();
       reader.onloadend = () => {
         setUserImagePreview(reader.result);
@@ -21,12 +22,15 @@ export default function PlaceModal({ place, onClose, onSave, isSaved = false }) 
   }
 
   function handleSave() {
+    // User uploaded image overrides everything
+    const finalUserImage = userImagePreview || null;
+
     onSave({
       ...place,
       wikiSummary: wikiData?.summary || null,
       wikiUrl: wikiData?.pageUrl || null,
-      autoImageUrl: imageData?.url || null,
-      userImageUrl: userImagePreview || null,
+      autoImageUrl: finalUserImage ? null : imageData?.url || null, // Clear auto if user uploaded
+      userImageUrl: finalUserImage,
     });
   }
 
@@ -34,20 +38,30 @@ export default function PlaceModal({ place, onClose, onSave, isSaved = false }) 
     <div className="fixed inset-0 z-[2000] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
       <div className="relative w-full max-w-lg bg-white rounded-2xl shadow-2xl overflow-hidden max-h-[90vh] flex flex-col">
         {/* Header Image */}
-        <div className="relative h-48 bg-gray-200">
-          {isLoading ? (
+        <div className="relative h-48 bg-gradient-to-br from-blue-100 to-blue-200">
+          {isLoading && !displayImage ? (
             <div className="absolute inset-0 flex items-center justify-center">
               <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
             </div>
-          ) : (
+          ) : displayImage ? (
             <img
-              src={userImagePreview || imageData?.url}
+              src={displayImage}
               alt={place.shortName}
               className="w-full h-full object-cover"
               onError={(e) => {
-                e.target.src = 'https://via.placeholder.com/800x400?text=No+Image';
+                e.target.style.display = 'none';
               }}
             />
+          ) : (
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="text-center text-blue-400">
+                <svg className="w-16 h-16 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+                <span className="text-sm">No image available</span>
+              </div>
+            </div>
           )}
 
           {/* Close button */}
@@ -60,10 +74,10 @@ export default function PlaceModal({ place, onClose, onSave, isSaved = false }) 
             </svg>
           </button>
 
-          {/* Image credit */}
-          {imageData?.photographer && (
-            <div className="absolute bottom-2 right-2 text-xs text-white/80 bg-black/30 px-2 py-1 rounded">
-              Photo: {imageData.photographer}
+          {/* Image source indicator */}
+          {userImagePreview && (
+            <div className="absolute bottom-2 right-2 text-xs text-white bg-green-600/80 px-2 py-1 rounded">
+              Your Photo
             </div>
           )}
         </div>
@@ -97,9 +111,9 @@ export default function PlaceModal({ place, onClose, onSave, isSaved = false }) 
             <p className="text-gray-500 italic mb-4">No Wikipedia info available</p>
           )}
 
-          {/* Upload personal photo */}
+          {/* Upload personal photo - always shows for new places */}
           {!isSaved && (
-            <div className="mt-4 p-4 border-2 border-dashed border-gray-300 rounded-lg">
+            <div className="mt-4 p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-400 transition-colors">
               <label className="block cursor-pointer text-center">
                 <input
                   type="file"
@@ -116,6 +130,7 @@ export default function PlaceModal({ place, onClose, onSave, isSaved = false }) 
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                       </svg>
                       <span>Click to upload your travel photo</span>
+                      <span className="block text-xs text-gray-400 mt-1">Your photo will replace the default image</span>
                     </>
                   )}
                 </div>

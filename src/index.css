@@ -4,6 +4,7 @@
 .leaflet-container {
   width: 100%;
   height: 100%;
+  cursor: crosshair;
 }
 
 /* Custom marker styles */
@@ -17,6 +18,20 @@
   overflow-y: auto;
 }
 
+/* Visited place tooltip styling */
+.leaflet-tooltip.visited-tooltip {
+  background: white;
+  border: none;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  padding: 8px;
+  font-family: system-ui, -apple-system, sans-serif;
+}
+
+.leaflet-tooltip.visited-tooltip::before {
+  border-top-color: white;
+}
+
 /* Smooth transitions */
 * {
   transition: background-color 0.2s ease, border-color 0.2s ease;
@@ -27,4 +42,10 @@ html, body, #root {
   padding: 0;
   width: 100%;
   height: 100%;
+}
+
+/* Click hint for map */
+.leaflet-container::after {
+  content: '';
+  pointer-events: none;
 }

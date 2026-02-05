@@ -38,7 +38,6 @@ export async function getWikiSummary(placeName, country = '') {
           summary: shortSummary || summaryData.extract.slice(0, 300) + '...',
           fullSummary: summaryData.extract,
           pageUrl: summaryData.content_urls?.desktop?.page || null,
-          thumbnail: summaryData.thumbnail?.source || null,
           title: summaryData.title,
         };
       }
